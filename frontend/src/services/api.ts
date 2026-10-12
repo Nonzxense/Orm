@@ -2,7 +2,7 @@ import { useAuthStore } from "@/stores/auth"
 import axios from "axios"
 import { refreshAccessToken } from "./auth"
 
-let baseURL = import.meta.env.VITE_API_URL || "http://localhost:8080/api"
+let baseURL = import.meta.env.VITE_API_URL || "/api"
 baseURL = baseURL.replace(/\/+$/, '')
 if (!baseURL.endsWith('/api')) {
   baseURL += '/api'
