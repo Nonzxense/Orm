@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: orm
+data:
+  PORT: "8080"
+  LOG_LEVEL: "info"
+  DB_HOST: "192.168.1.53"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  DB_NAME: "orm"
+  DB_SSLMODE: "disable"
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_USERNAME: "nitid1987@gmail.com"
+  SMTP_FROM: "nitid1987@gmail.com"
+  FRONTEND_URL: "http://192.168.1.50"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: orm
+data:
+  VITE_API_URL: "http://192.168.1.50/api"
