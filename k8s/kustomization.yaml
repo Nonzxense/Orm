@@ -8,3 +8,5 @@ resources:
 images:
   - name: ghcr.io/nonzxense/orm-backend
     newTag: 0a70749a44f8182091d59d2dc4f3b65473c6fa1b
+  - name: ghcr.io/nonzxense/orm-frontend
+    newTag: 0a70749a44f8182091d59d2dc4f3b65473c6fa1b
