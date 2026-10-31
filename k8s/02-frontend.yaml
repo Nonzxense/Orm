@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ghcr.io/nonzxense/orm-frontend:901283f676e7c73491e627f6a7ee6262e69661dc 
+          image: ghcr.io/nonzxense/orm-frontend
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
