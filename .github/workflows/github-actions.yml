@@ -1,3 +1,4 @@
+
 name: Build and Push Images
 
 on:
@@ -7,28 +8,24 @@ on:
     paths-ignore:
       - 'k8s/**'
       - 'README.md'
+
   pull_request:
     branches:
       - main
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   build:
-    name: Build ${{ matrix.service }}
+    name: Build Changed Services
     runs-on: ubuntu-latest
 
     permissions:
       contents: write
       packages: write
-      
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - frontend
-          - backend
+      pull-requests: read
 
     steps:
       - name: Checkout
@@ -36,9 +33,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 1. Detect changed services
+      - name: Detect Changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'apps/frontend/**'
+            backend:
+              - 'apps/backend/**'
+
+      # 2. Setup Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3. Login to GHCR
       - name: Log in to GHCR
         if: github.event_name == 'push'
         uses: docker/login-action@v3
@@ -47,66 +57,117 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract image metadata
-        id: meta
+      # ==========================================
+      # FRONTEND
+      # ==========================================
+
+      - name: Frontend Metadata
+        if: steps.filter.outputs.frontend == 'true'
+        id: frontend_meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/orm-${{ matrix.service }}
+          images: ghcr.io/${{ github.repository_owner }}/orm-frontend
           tags: |
             type=sha,format=long,prefix=
 
-      - name: Build image
+      - name: Build Frontend
+        if: steps.filter.outputs.frontend == 'true'
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.service }}
-          file: ./${{ matrix.service == 'frontend' && 'frontend' || 'backend' }}/Dockerfile
+          context: ./frontend
+          file: ./frontend/Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: VITE_API_URL=${{ matrix.service == 'frontend' && '/api' || '' }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          tags: ${{ steps.frontend_meta.outputs.tags }}
+          labels: ${{ steps.frontend_meta.outputs.labels }}
+          build-args: |
+            VITE_API_URL=/api
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      # ==========================================
+      # BACKEND
+      # ==========================================
+
+      - name: Backend Metadata
+        if: steps.filter.outputs.backend == 'true'
+        id: backend_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/orm-backend
+          tags: |
+            type=sha,format=long,prefix=
+
+      - name: Build Backend
+        if: steps.filter.outputs.backend == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.backend_meta.outputs.tags }}
+          labels: ${{ steps.backend_meta.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # ==========================================
+      # UPDATE KUBERNETES MANIFEST
+      # ==========================================
 
       - name: Setup Kustomize
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && (steps.filter.outputs.frontend == 'true' || steps.filter.outputs.backend == 'true')
         uses: imranismail/setup-kustomize@v2
 
-      - name: Update Kubernetes Manifest Tag
-        if: github.event_name == 'push'
+      - name: Update Kubernetes Image Tags
+        if: github.event_name == 'push' && (steps.filter.outputs.frontend == 'true' || steps.filter.outputs.backend == 'true')
         run: |
-          cd k8s/apps/${{ matrix.service }}
-          kustomize edit set image ghcr.io/${{ github.repository_owner }}/orm-${{ matrix.service }}=ghcr.io/${{ github.repository_owner }}/orm-${{ matrix.service }}:${{ steps.meta.outputs.version }}
+          cd k8s
 
-      - name: Commit and Push Changes with Retry Logic
-        if: github.event_name == 'push'
+          if [ "${{ steps.filter.outputs.frontend }}" == "true" ]; then
+            kustomize edit set image \
+              ghcr.io/${{ github.repository_owner }}/orm-frontend=ghcr.io/${{ github.repository_owner }}/orm-frontend:${{ steps.frontend_meta.outputs.version }}
+          fi
+
+          if [ "${{ steps.filter.outputs.backend }}" == "true" ]; then
+            kustomize edit set image \
+              ghcr.io/${{ github.repository_owner }}/orm-backend=ghcr.io/${{ github.repository_owner }}/orm-backend:${{ steps.backend_meta.outputs.version }}
+          fi
+
+      # ==========================================
+      # COMMIT AND PUSH
+      # ==========================================
+
+      - name: Commit and Push Changes
+        if: github.event_name == 'push' && (steps.filter.outputs.frontend == 'true' || steps.filter.outputs.backend == 'true')
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-  
-          git add k8s/apps/${{ matrix.service }}/kustomization.yaml
-          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add k8s/kustomization.yaml
+
           if ! git diff --cached --quiet; then
-            git commit -m "deploy: update ${{ matrix.service }} image tag to ${{ steps.meta.outputs.version }} [skip ci]"
-            
+            git commit -m "deploy: update image tags [skip ci]"
+
             success=false
+
             for i in {1..5}; do
               echo "Attempt $i to push changes..."
+
               git pull origin main --rebase
-              
+
               if git push origin main; then
                 echo "Successfully pushed changes!"
                 success=true
                 break
-              else
-                echo "Push failed due to race condition. Retrying in 3 seconds..."
-                sleep 3
               fi
+
+              echo "Push failed. Retrying in 3 seconds..."
+              sleep 3
             done
-            
+
             if [ "$success" = false ]; then
-              echo "Error: Failed to push changes after 5 attempts."
+              echo "Failed to push after 5 attempts."
               exit 1
             fi
           else
-            echo "No changes to commit for ${{ matrix.service }}"
+            echo "No manifest changes."
           fi
