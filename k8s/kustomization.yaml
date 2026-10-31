@@ -2,11 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - 02-frontend.yaml
-  - 03-backend.yaml
+- 02-frontend.yaml
+- 03-backend.yaml
 
 images:
-  - name: ghcr.io/nonzxense/orm-frontend
-    newTag: placeholder
-  - name: ghcr.io/nonzxense/orm-backend
-    newTag: placeholder
+- name: ghcr.io/Nonzxense/orm-frontend
+  newName: ghcr.io/Nonzxense/orm-frontend
+  newTag: 436bb98efeb7383367a10f866cda330bfe9e55bf
+- name: ghcr.io/nonzxense/orm-backend
+  newTag: placeholder
+- name: ghcr.io/nonzxense/orm-frontend
+  newTag: placeholder
