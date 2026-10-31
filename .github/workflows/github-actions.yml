@@ -65,7 +65,7 @@ jobs:
         id: frontend_meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/orm-frontend
+          images: ghcr.io/nonzxense/orm-frontend
           tags: |
             type=sha,format=long,prefix=
 
@@ -92,7 +92,7 @@ jobs:
         id: backend_meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/orm-backend
+          images: ghcr.io/nonzxense/orm-backend
           tags: |
             type=sha,format=long,prefix=
 
@@ -123,12 +123,12 @@ jobs:
 
           if [ "${{ steps.filter.outputs.frontend }}" == "true" ]; then
             kustomize edit set image \
-              ghcr.io/${{ github.repository_owner }}/orm-frontend=ghcr.io/${{ github.repository_owner }}/orm-frontend:${{ steps.frontend_meta.outputs.version }}
+              ghcr.io/nonzxense/orm-frontend=ghcr.io/nonzxense/orm-frontend:${{ steps.frontend_meta.outputs.version }}
           fi
 
           if [ "${{ steps.filter.outputs.backend }}" == "true" ]; then
             kustomize edit set image \
-              ghcr.io/${{ github.repository_owner }}/orm-backend=ghcr.io/${{ github.repository_owner }}/orm-backend:${{ steps.backend_meta.outputs.version }}
+              ghcr.io/nonzxense/orm-backend=ghcr.io/nonzxense/orm-backend:${{ steps.backend_meta.outputs.version }}
           fi
 
           cat kustomization.yaml
