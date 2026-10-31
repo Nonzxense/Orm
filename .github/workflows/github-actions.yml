@@ -39,9 +39,9 @@ jobs:
         with:
           filters: |
             frontend:
-              - 'apps/frontend/**'
+              - 'frontend/**'
             backend:
-              - 'apps/backend/**'
+              - 'backend/**'
 
       # 2. Setup Docker Buildx
       - name: Set up Docker Buildx
