@@ -83,7 +83,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
           
+          git stash --include-untracked
+          
           git pull origin main --rebase
+          
+          git stash pop || echo "No stash to pop"
           
           git add k8s/kustomization.yaml
           
