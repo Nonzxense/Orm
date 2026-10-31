@@ -101,7 +101,7 @@ async function handleResend() {
 
                 <div class="text-center mb-8">
                     <h1 class="text-3xl font-bold">
-                        เข้าสู่ระบ5555
+                        ขบสู่ระเบ้า
                     </h1>
 
                     <p class="text-base-content/60 mt-2">
