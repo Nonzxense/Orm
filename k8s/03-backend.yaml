@@ -18,6 +18,13 @@ spec:
       labels:
         app: backend
     spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: backend
       containers:
         - name: backend
           image: ghcr.io/nonzxense/orm-backend
