@@ -1,0 +1,42 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: monitoring-storage
+  namespace: monitoring
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/rancher/local-path-provisioner.git
+    targetRevision: v0.0.37
+    path: deploy/chart/local-path-provisioner
+
+    helm:
+      releaseName: local-path-provisioner
+
+      values: |
+        storageClass:
+          create: true
+          name: local-path
+          defaultClass: false
+          reclaimPolicy: Retain
+          volumeBindingMode: WaitForFirstConsumer
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: local-path-storage
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
